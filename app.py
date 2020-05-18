@@ -44,25 +44,48 @@ def welcome():
     )
 
 
-@app.route("/api/v1.0/names")
-def names():
-    # Create our session (link) from Python to the DB
+@app.route('/api/v1.0/precipitation')
+def precipitation():
     session = Session(engine)
-
-    """Return a list of all passenger names"""
-    # Query all passengers
-    results = session.query(Passenger.name).all()
-
+    col_scope  = [Measurement.date,Measurement.prcp]
+    data_scope = session.query(*col_scope).all()
     session.close()
 
-    # Convert list of tuples into normal list
-    all_names = list(np.ravel(results))
+    precipitation = []
+    for date, prcp in data_scope:
+        precip_data = {}
+        precip_data["Date"] = date
+        precip_data["Precipitation"] = prcp
+        precipitation.append(precip_data)
 
-    return jsonify(all_names)
+    return jsonify(precipitation)
 
 
-@app.route("/api/v1.0/passengers")
-def passengers():
+
+
+@app.route('/api/v1.0/stations')
+def stations():
+    session = Session(engine)
+    station_cols = [Station.station,Station.name,Station.latitude,Station.longitude,Station.elevation]
+    station_data = session.query(*station_cols).all()
+    session.close()
+
+    stations = []
+    for station,name,lat,lon,elev in station_data:
+        station_data = {}
+        station_data["Station"] = station
+        station_data["Name"] = name
+        station_data["Lat"] = lat
+        station_data["Lon"] = lon
+        station_data["Elevation"] = elev
+        stations.append(station_data)
+
+    return jsonify(stations)
+
+
+
+@app.route("/api/v1.0/tobs")
+def tobs():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
