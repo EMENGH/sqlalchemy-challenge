@@ -44,22 +44,36 @@ def welcome():
     )
 
 
+@app.route('/api/v1.0/<start>')
+def get_t_start(start):
+    session = Session(engine)
+    act_station_stats  = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs),
+                         func.max(Measurement.tobs)).filter(Measurement.date >= start).all()
+    session.close()
+    tobs_array = []
+    for date, tobs in data_scope:
+        data_tobs = {}
+        data_tobs["Date"] = date
+        data_tobs["Tobs"] = tobs
+        tobs_array.append(data_tobs)
+
+    return jsonify(tobs_array)
+
+
+
 @app.route('/api/v1.0/precipitation')
 def precipitation():
     session = Session(engine)
     col_scope  = [Measurement.date,Measurement.prcp]
     data_scope = session.query(*col_scope).all()
     session.close()
-
     precipitation = []
     for date, prcp in data_scope:
-        precip_data = {}
-        precip_data["Date"] = date
-        precip_data["Precipitation"] = prcp
-        precipitation.append(precip_data)
-
+        data_precip = {}
+        data_precip["Date"] = date
+        data_precip["Precipitation"] = prcp
+        precipitation.append(data_precip)
     return jsonify(precipitation)
-
 
 
 
@@ -69,42 +83,37 @@ def stations():
     station_cols = [Station.station,Station.name,Station.latitude,Station.longitude,Station.elevation]
     station_data = session.query(*station_cols).all()
     session.close()
-
     stations = []
     for station,name,lat,lon,elev in station_data:
-        station_data = {}
-        station_data["Station"] = station
-        station_data["Name"] = name
-        station_data["Lat"] = lat
-        station_data["Lon"] = lon
-        station_data["Elevation"] = elev
-        stations.append(station_data)
-
+        data_station = {}
+        data_station["Station"] = station
+        data_station["Name"] = name
+        data_station["Lat"] = lat
+        data_station["Lon"] = lon
+        data_station["Elevation"] = elev
+        stations.append(data_station)
     return jsonify(stations)
 
 
 
-@app.route("/api/v1.0/tobs")
+@app.route('/api/v1.0/tobs')
 def tobs():
-    # Create our session (link) from Python to the DB
     session = Session(engine)
-
-    """Return a list of passenger data including the name, age, and sex of each passenger"""
-    # Query all passengers
-    results = session.query(Passenger.name, Passenger.age, Passenger.sex).all()
-
+    latest_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
+    latest_date_fixed = dt.datetime.strptime(latest_date, '%Y-%m-%d')
+    first_date = dt.date(latest_date_fixed.year -1, latest_date_fixed.month, latest_date_fixed.day)
+    col_scope = [Measurement.date,Measurement.tobs]
+    data_scope = session.query(*col_scope).filter(Measurement.date >= first_date).all()
     session.close()
 
-    # Create a dictionary from the row data and append to a list of all_passengers
-    all_passengers = []
-    for name, age, sex in results:
-        passenger_dict = {}
-        passenger_dict["name"] = name
-        passenger_dict["age"] = age
-        passenger_dict["sex"] = sex
-        all_passengers.append(passenger_dict)
+    tobs_array = []
+    for date, tobs in data_scope:
+        data_tobs = {}
+        data_tobs["Date"] = date
+        data_tobs["Tobs"] = tobs
+        tobs_array.append(data_tobs)
 
-    return jsonify(all_passengers)
+    return jsonify(tobs_array)
 
 
 if __name__ == '__main__':
